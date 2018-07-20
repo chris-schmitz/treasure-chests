@@ -1,0 +1,6 @@
+{
+    "board": "adafruit:nrf52:feather52",
+    "port": "/dev/cu.SLAB_USBtoUART",
+    "sketch": "sensor-and-servo.ino",
+    "configuration": "softdevice=s132v201,debug=l0"
+}
