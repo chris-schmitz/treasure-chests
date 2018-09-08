@@ -1,10 +1,27 @@
 #include <Servo.h>
 #include <Adafruit_NeoPixel.h>
+#include <Wire.h>
 
-#define servoPin 2
-#define triggerPin 3
-#define echoPin 4
-#define neopixelPin 5
+// ! bluefruit nRF5 pins
+// #define servoPin 2
+// #define triggerPin 3
+// #define echoPin 4
+// #define neopixelPin 5
+// #define speakerPin
+
+// // ! adalogger M0 express pins
+// #define servoPin 14
+// #define triggerPin 13
+// #define echoPin 16
+// #define neopixelPin 17
+// #define speakerPin 18
+
+// ! feather huzzah
+#define servoPin 15
+#define triggerPin 14
+#define echoPin 12
+#define neopixelPin 13
+#define speakerPin 16
 
 Servo myservo;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(8, neopixelPin, NEO_GRB + NEO_KHZ800);
@@ -31,6 +48,7 @@ void setup()
 
 void loop()
 {
+
     // * Get back into a ready state for the ultrasonic sensor
     digitalWrite(triggerPin, LOW);
     delayMicroseconds(2);
@@ -49,10 +67,13 @@ void loop()
     // ! HALF of that round trip
     distance = duration * 0.034 / 2;
 
-    // Serial.print("Duration: ");
-    // Serial.println(duration);
+    Serial.println("=============");
+    Serial.print("Duration: ");
+    Serial.println(duration);
     Serial.print("Distance: ");
     Serial.println(distance);
+    Serial.println("=============");
+    return;
 
     if (distance < 50)
     {
@@ -62,6 +83,7 @@ void loop()
             Serial.println("set Trigger close true");
             triggerClose = true;
             myservo.write(0);
+            tone(speakerPin, 1000, 500);
             colorWipe(strip.Color(255, 0, 0), 5);
         }
     }
@@ -114,36 +136,6 @@ unsigned long countPulse_C(const volatile uint32_t *port, uint32_t bit, uint32_t
             return 0;
     }
     return width;
-}
-
-/* Measures the length (in microseconds) of a pulse on the pin; state is HIGH
- * or LOW, the type of pulse to measure.  Works on pulses from 2-3 microseconds
- * to 3 minutes in length, but must be called at least a few dozen microseconds
- * before the start of the pulse. */
-uint32_t pulseIn(uint32_t pin, uint32_t state, uint32_t timeout)
-{
-    // cache the port and bit of the pin in order to speed up the
-    // pulse width measuring loop and achieve finer resolution.  calling
-    // digitalRead() instead yields much coarser resolution.
-    // PinDescription p = g_APinDescription[pin];
-    uint32_t bit = 1 << pin; //p.ulPin;
-    uint32_t stateMask = state ? bit : 0;
-
-    // convert the timeout from microseconds to a number of times through
-    // the initial loop; it takes (roughly) 13 clock cycles per iteration.
-    uint32_t maxloops = microsecondsToClockCycles(timeout) / 13;
-
-    uint32_t width = countPulse_C(&(NRF_GPIO->IN), bit, stateMask, maxloops);
-    //TODO  uint32_t width = countPulseASM(&(NRF_GPIO->IN), bit, stateMask, maxloops);
-
-    // convert the reading to microseconds. The loop has been determined
-    // to be 13 clock cycles long and have about 16 clocks between the edge
-    // and the start of the loop. There will be some error introduced by
-    // the interrupt handlers.
-    if (width)
-        return clockCyclesToMicroseconds(width * 13 + 16);
-    else
-        return 0;
 }
 
 // ! From the adafruit strandtest
