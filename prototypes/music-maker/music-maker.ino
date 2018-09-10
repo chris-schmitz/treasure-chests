@@ -28,7 +28,12 @@ Servo myservo;
 long duration;
 long distance;
 int triggerDistance = 60;
+
 int volumeLevel = 20;
+int newVolumeLevel = 0;
+#define VOLUME_CHANGE_STEP 5
+int LOWER_LIMIT = 40;
+int UPPER_LIMIT = 9;
 
 void setup()
 {
@@ -69,10 +74,10 @@ void setup()
     // list files
     // printDirectory(SD.open("/"), 0);
 
+    musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
+
     // Set volume for left, right channels. lower numbers == louder volume!
     musicPlayer.setVolume(volumeLevel, volumeLevel);
-
-    musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT); // DREQ int
 
     attachInterrupt(digitalPinToInterrupt(VOLUME_UP), volumeUp, RISING);
     attachInterrupt(digitalPinToInterrupt(VOLUME_DOWN), volumeDown, RISING);
@@ -86,14 +91,13 @@ void loop()
     // // ! with down taking higher importance.
     // // ! This way if the user holds down both buttons, the default is for the
     // // ! volume to go down, not up.
-    // if (digitalRead(VOLUME_DOWN))
-    // {
-    //     adjustVolume("down");
-    // }
-    // else if (digitalRead(VOLUME_UP))
-    // {
-    //     adjustVolume("up");
-    // }
+    if (volumeLevel != newVolumeLevel)
+    {
+        volumeLevel = newVolumeLevel;
+        adjustVolume(volumeLevel);
+    }
+
+    return;
 
     // * Prep ultrasonic sensor
     digitalWrite(TRIGGER, LOW);
@@ -191,6 +195,12 @@ void colorWipe(uint32_t c, uint8_t pause, bool reverse = 0)
 
 void playSlideWhistle()
 {
+    if (musicPlayer.playingMusic)
+    {
+        Serial.println("music is currently playing, can't slide whistle again");
+        return;
+    }
+
     musicPlayer.startPlayingFile("track001.wav");
     myservo.write(0);
     colorWipe(strip.Color(255, 0, 0), 17);
@@ -207,25 +217,23 @@ void playSlideWhistle()
 
 void volumeUp()
 {
-    adjustVolume("up");
+    newVolumeLevel = volumeLevel - VOLUME_CHANGE_STEP;
 }
 void volumeDown()
 {
-    adjustVolume("down");
+    newVolumeLevel = volumeLevel + VOLUME_CHANGE_STEP;
 }
 
-void adjustVolume(String direction)
+void adjustVolume(int level)
 {
-    if (direction == "up" && volumeLevel > 10)
+    return;
+    Serial.print("requested level: ");
+    Serial.println(level);
+    Serial.print("level within range: ");
+    int inRange = level > LOWER_LIMIT && level < UPPER_LIMIT;
+    Serial.println(inRange);
+    if (inRange)
     {
-        volumeLevel--; // * lower numbers == louder
+        musicPlayer.setVolume(level, level);
     }
-    else if (direction == "down" && volumeLevel < 40)
-    {
-        volumeLevel++; // * higher numbers == softer
-    }
-
-    Serial.print("Setting volume to level: ");
-    Serial.println(volumeLevel);
-    musicPlayer.setVolume(volumeLevel, volumeLevel);
 }
