@@ -27,13 +27,19 @@ Servo myservo;
 
 long duration;
 long distance;
-int triggerDistance = 60;
+int triggerDistance = 20;
 
-int volumeLevel = 20;
-int newVolumeLevel = 0;
-#define VOLUME_CHANGE_STEP 5
-int LOWER_LIMIT = 40;
-int UPPER_LIMIT = 9;
+uint8_t volumeLevel = 10;
+uint8_t newVolumeLevel = volumeLevel;
+uint8_t VOLUME_CHANGE_STEP = 5;
+
+// ! Something important to note about how the music maker library handles volume is that
+// ! setting the volume with lower numbers makes the volume louder and vice versa. So here
+// ! when we're referring to the `VOLUME_LOWER_LIMIT` and `VOLUME_UPPER_LIMIT`, we're referring
+// ! to the number values passed in, not the loudness level we want the speaker to be at.
+// ! (hopefully that makes sense :| )
+uint8_t VOLUME_LOWER_LIMIT = 0;  // * this is the cap on how loud we get
+uint8_t VOLUME_UPPER_LIMIT = 50; // * this is the cap on how soft we get
 
 void setup()
 {
@@ -86,19 +92,26 @@ void setup()
 void loop()
 {
     delay(100);
-
     // // ! Note that I'm putting the up and down check into an if/elseif structure
     // // ! with down taking higher importance.
     // // ! This way if the user holds down both buttons, the default is for the
     // // ! volume to go down, not up.
-    if (volumeLevel != newVolumeLevel)
+    checkVolume();
+
+    distance = checkDistance();
+
+    if (distance > triggerDistance)
     {
-        volumeLevel = newVolumeLevel;
-        adjustVolume(volumeLevel);
+        return; // ! skip, nothing to do
     }
 
-    return;
+    Serial.println("within trigger distance!");
+    musicPlayer.stopPlaying();
+    playSlideWhistle();
+}
 
+long checkDistance()
+{
     // * Prep ultrasonic sensor
     digitalWrite(TRIGGER, LOW);
     delayMicroseconds(2);
@@ -120,17 +133,7 @@ void loop()
     // Serial.print("Distance: ");
     // Serial.println(distance);
     // Serial.println("=======");
-
-    if (distance > triggerDistance)
-    {
-        Serial.println("not close enough");
-        return; // ! skip, nothing to do
-    }
-
-    musicPlayer.stopPlaying();
-    playSlideWhistle();
-    // delay(100);
-    return;
+    return distance;
 }
 
 /// File listing helper
@@ -201,7 +204,7 @@ void playSlideWhistle()
         return;
     }
 
-    musicPlayer.startPlayingFile("track001.wav");
+    musicPlayer.startPlayingFile("track003.mp3");
     myservo.write(0);
     colorWipe(strip.Color(255, 0, 0), 17);
     delay(100);
@@ -217,23 +220,84 @@ void playSlideWhistle()
 
 void volumeUp()
 {
+    // Serial.println("++++++++++++++++++++++++++++++++++++");
+    // Serial.print("current volume level: ");
+    // Serial.println(volumeLevel);
+    // Serial.print("volume level minus step: ");
+    // Serial.println(volumeLevel - VOLUME_CHANGE_STEP);
+    // Serial.print("volume level minus step is greater than volume level: ");
+    // Serial.println((volumeLevel - VOLUME_CHANGE_STEP < VOLUME_LOWER_LIMIT));
+    // Serial.println("++++++++++++++++++++++++++++++++++++");
+    if ((volumeLevel - VOLUME_CHANGE_STEP < VOLUME_LOWER_LIMIT))
+    {
+        newVolumeLevel = VOLUME_LOWER_LIMIT;
+        return;
+    }
     newVolumeLevel = volumeLevel - VOLUME_CHANGE_STEP;
 }
 void volumeDown()
 {
+    // Serial.println("++++++++++++++++++++++++++++++++++++");
+    // Serial.print("current volume level: ");
+    // Serial.println(volumeLevel);
+    // Serial.print("volume level plus step: ");
+    // Serial.println(volumeLevel + VOLUME_CHANGE_STEP);
+    // Serial.print("volume level minus step is greater than volume level: ");
+    // Serial.println((volumeLevel + VOLUME_CHANGE_STEP > VOLUME_LOWER_LIMIT));
+    // Serial.println("++++++++++++++++++++++++++++++++++++");
+    if ((volumeLevel + VOLUME_CHANGE_STEP > VOLUME_UPPER_LIMIT))
+    {
+        newVolumeLevel = VOLUME_UPPER_LIMIT;
+        return;
+    }
     newVolumeLevel = volumeLevel + VOLUME_CHANGE_STEP;
+}
+
+void checkVolume()
+{
+    if (volumeLevel != newVolumeLevel)
+    {
+        volumeLevel = newVolumeLevel;
+        adjustVolume(volumeLevel);
+    }
 }
 
 void adjustVolume(int level)
 {
-    return;
-    Serial.print("requested level: ");
-    Serial.println(level);
-    Serial.print("level within range: ");
-    int inRange = level > LOWER_LIMIT && level < UPPER_LIMIT;
-    Serial.println(inRange);
-    if (inRange)
+    // * These checks are kind of unnecessary in the grand scheme of this particular sketch.
+    // * In the `volumeUp` and `volumeDown` interrupt functions we're checking to make sure the
+    // * new volume that we're we're setting isn't outside of our determined range.
+    // * That said, this `adjustVolume` function could possibly be called from anywhere and have
+    // * any integer value passed in, so it's worth doing a quick check here to make sure we're not
+    // * out of range as well.
+    bool aboveLowerLimit = (level <= VOLUME_UPPER_LIMIT);
+    bool belowUpperLimit = (level >= VOLUME_LOWER_LIMIT);
+    bool inRange = belowUpperLimit && aboveLowerLimit;
+
+    // Serial.println("=====================================");
+    // Serial.print("Lower Limit Value: ");
+    // Serial.println(VOLUME_LOWER_LIMIT);
+    // Serial.print("Upper Limit Value: ");
+    // Serial.println(VOLUME_UPPER_LIMIT);
+    // Serial.print("New level value: ");
+    // Serial.println(level);
+    // Serial.print("Current volume level: ");
+    // Serial.println(volumeLevel);
+    // Serial.println("-------------------------------------");
+
+    // Serial.print("level is above lower limit: ");
+    // Serial.println(aboveLowerLimit);
+    // Serial.print("level is below upper limit: ");
+    // Serial.println(belowUpperLimit);
+    // Serial.print("level is within range: ");
+    // Serial.println(inRange);
+    // Serial.print("the new volume level is: ");
+    // Serial.println(level);
+    // Serial.println("=====================================");
+
+    if (inRange == true)
     {
         musicPlayer.setVolume(level, level);
+        return;
     }
 }
