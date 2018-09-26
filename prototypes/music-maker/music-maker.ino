@@ -55,6 +55,7 @@ void setup()
     pinMode(VOLUME_UP, INPUT);
 
     myservo.attach(A2);
+    pinMode(A2, OUTPUT);
 
     Serial.println("\n\nAdafruit VS1053 Feather Test");
 
@@ -91,6 +92,8 @@ void setup()
 
 void loop()
 {
+
+    strip.show();
     delay(100);
     // // ! Note that I'm putting the up and down check into an if/elseif structure
     // // ! with down taking higher importance.
@@ -205,11 +208,32 @@ void playSlideWhistle()
     }
 
     musicPlayer.startPlayingFile("track003.mp3");
-    myservo.write(0);
     colorWipe(strip.Color(255, 0, 0), 17);
-    delay(100);
+    delay(5);
+    servoWave();
     colorWipe(strip.Color(0, 0, 0), 17, 1);
-    myservo.write(180);
+}
+
+void servoWave()
+{
+    Serial.println("waving");
+    uint8_t startPosition = 0;
+    uint8_t endPosition = 180;
+    uint8_t pause = 6;
+    myservo.write(0);
+
+    for (int i = startPosition; i <= endPosition; i++)
+    {
+        myservo.write(i);
+        delay(pause);
+    }
+
+    for (int i = endPosition; i > startPosition; i--)
+    {
+        myservo.write(i);
+        delay(pause);
+    }
+    myservo.write(0);
 }
 
 /**
