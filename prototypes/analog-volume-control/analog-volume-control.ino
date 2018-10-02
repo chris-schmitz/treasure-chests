@@ -36,7 +36,7 @@ void loop()
 {
     sensorValue = analogRead(potPin);
     uint8_t volumeLevel = map(sensorValue, 0, 1023, 50, 0);
-    uint16_t pixelCount = map(sensorValue, 0, 1023, 0, 30);
+    uint8_t pixelCount = map(sensorValue, 0, 1023, 0, 30);
 
     Serial.println("==============");
     Serial.print("sensor value: ");
